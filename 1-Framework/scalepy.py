@@ -16,7 +16,8 @@ def select_records(magnitude_range, vs_range, rjb, fault_mechanism):
     ### Kayıtların seçilmesi ###
 
     ## Dosyaların okunması
-    FlatFile_path_name = "C:\\Users\\KaratasD\\Desktop\\WS_Development\\21.07\\PRJ2729_EQE_Selection_Scaling\\0-Data\\Flatfile_mini.xlsx"
+    FlatFile_path_name = "C:\\Users\\KaratasD\\Desktop\\PRJ_2729\\EQE_Selection_Scaling\\0-Data\\flat_final.xlsx"
+    
 
     eqe_df = pd.read_excel(FlatFile_path_name)
 
@@ -28,7 +29,7 @@ def select_records(magnitude_range, vs_range, rjb, fault_mechanism):
 
 
     eqe_s = eqe_df[(eqe_df["Earthquake Magnitude"] > min_m) & (eqe_df["Earthquake Magnitude"] < max_m) 
-                      & (eqe_df["Preferred Vs30 (m/s)"] > min_vs) & (eqe_df["Preferred Vs30 (m/s)"] < max_vs)
+                      & (eqe_df["Vs30 (m/s) selected for analysis"] > min_vs) & (eqe_df["Vs30 (m/s) selected for analysis"] < max_vs)
                       &  (eqe_df["EpiD (km)"] > min_d) & (eqe_df["EpiD (km)"] < max_d)]
 
 
