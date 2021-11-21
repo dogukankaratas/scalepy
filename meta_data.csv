@@ -1,4 +1,4 @@
-tz, Record Sequence Number, 5-75% Duration (sec), 5-95% Duration (sec), Arias Intensity (m/sec), Earthquake Name, Year, Station Name, Magnitude, Mechanism, Rjb (km), Rrup (km), Vs30 (m/sec), Lowest Useable Frequency (Hz), Horizontal-1 Acc. Filename, Horizontal-2 Acc. Filename, Vertical Acc. Filename
+tz,RecordSequenceNumber,5-75%Duration(sec),5-95%Duration(sec),AriasIntensity(m/sec),EarthquakeName,Year,StationName,Magnitude,Mechanism,Rjb(km),Rrup(km),Vs30(m/sec),LowestUseableFrequency(Hz),Horizontal-1Acc.Filename,Horizontal-2Acc.Filename,VerticalAcc.Filename
 11576,1,1.2,2.5,0.1," ""Helena_ Montana-01""",1935," ""Carroll College""",6, strike slip,2.07,2.86,593.35,0.1625, RSN1_HELENA.A_A-HMC180.AT2, RSN1_HELENA.A_A-HMC270.AT2 , RSN1_HELENA.A_A-HMCDWN.AT2  
 11577,2,0.3,0.8,0," ""Helena_ Montana-02""",1935," ""Helena Fed Bldg""",6, strike slip,2.09,2.92,551.82,0.5, RSN2_HELENA.B_B-FEB000.AT2, RSN2_HELENA.B_B-FEB090.AT2 , RSN2_HELENA.B_B-FEB-UP.AT2  
 11578,3,9.5,23.2,0," ""Humbolt Bay""",1937," ""Ferndale City Hall""",5.8, strike slip,71.28,71.57,219.31,0.375, RSN3_HUMBOLT_FRN225.AT2, RSN3_HUMBOLT_FRN315.AT2 , RSN3_HUMBOLT_FRN-UP.AT2  
