@@ -102,7 +102,8 @@ def recordSelection(magnitude_range: str = '4 9',
                    duration_5_95_range: str = '0 50', 
                    arias_intensity_range: str = '0 5', 
                    target_spectrum: DataFrame = pd.DataFrame() , 
-                   period = 1 , 
+                   pulse_type : str = "Any",
+                   period: float = 1 , 
                    test_run = False):
     """
     Args:
@@ -119,7 +120,14 @@ def recordSelection(magnitude_range: str = '4 9',
         duration_5_95_range (str): 5-95% Duration(sec) Range
         arias_intensity_range (str): Arias Intensity (m/sec) Range
         target_spectra (dataframe): Target Spectra Dataframe
+        pulse (int): Pulse [Pulse‐like (1)] or Non-pulse [non‐pulse‐like (0)] or Any[any (2)] indicator
     """
+    print( "-" * 50 )
+    for key , val in {"magnitude_range":magnitude_range , "vs_range" : vs_range, "rjb_range" :rjb_range, "fault_mechnanism": fault_mechnanism, "duration_5_75_range" : duration_5_75_range,"duration_5_95_range" : duration_5_95_range, "arias_intensity_range" : arias_intensity_range, "target_spectrum" : 1, "pulse_type" : pulse_type ,"period" :period, "test_run" :  test_run }.items() :
+        print( f"{key.casefold()} = {val}")
+
+    print( "-" * 50 )
+
 
     if test_run == True : 
         magnitude_range= '4 9'
@@ -131,12 +139,13 @@ def recordSelection(magnitude_range: str = '4 9',
         arias_intensity_range = '0 5'
         period = 1 
         target_spectrum = pd.DataFrame()
-
         target_spectrum = targetSpectrum(0.8, 0.4, 'ZA')
+        pulse_type = "Any"
 
 
     # Read the Meta Data
-    eqe_df = pd.read_csv("meta_data.csv")
+    eqe_df = pd.read_csv("meta_data-R1.csv")
+
     print( f"Total number of PEER EQE Record is = {len( eqe_df)}")
 
     # Split Inputs
@@ -154,8 +163,16 @@ def recordSelection(magnitude_range: str = '4 9',
                       &  (eqe_df["5-75%Duration(sec)"] > min_d_75) & (eqe_df["5-75%Duration(sec)"] < max_d_75)
                       &  (eqe_df["5-95%Duration(sec)"] > min_d_95) & (eqe_df["5-95%Duration(sec)"] < max_d_95)
                       &  (eqe_df["AriasIntensity(m/sec)"] > min_arias) & (eqe_df["AriasIntensity(m/sec)"] < max_arias)]
-
     
+    # Pulse type filtering
+    if pulse_type == "Pulse" :
+        eqe_s = eqe_s[ eqe_s["Pulse"] == 1 ]
+    elif pulse_type == "Non-Pulse" :
+        eqe_s = eqe_s[ eqe_s["Pulse"] == 2 ]
+    else :
+        eqe_s = eqe_s 
+
+    # Mechanism type filtering
     if fault_mechnanism == 'Strike - Slip':
         eqe_s = eqe_s[(eqe_s['Mechanism'] == ' strike slip')]
     
@@ -204,25 +221,6 @@ def recordSelection(magnitude_range: str = '4 9',
     # Create the range spectrum
     geo_mean_range_df = geo_mean_df[ ( geo_mean_df["T"] >= 0.2 * period) & ( geo_mean_df["T"] <= 1.5 * period ) ]
     target_spectrum_range_df = target_spectrum[ ( target_spectrum["T"] >= 0.2 * period) & ( target_spectrum["T"] <= 1.5 * period ) ]
-
-
-    # Create empty dictionary for differences
-    # differ_dict = {}
-
-    ### List the target spectrum
-    ##sa_list = target_spectrum['Sa'].tolist()
-    ##
-    ### Find the difference of each spectra to target spectrum
-    ##for i in geo_mean_df.columns:
-    ##    differ_dict[i] = [abs(x-y) for x,y in zip(sa_list, geo_mean_df[ i ])]
-    ##
-    #for i in geo_mean_df.columns:
-    #    differ_dict[i] = max(differ_dict[i])
-    # key_list = []
-    # for key, value in differ_dict.items():
-    #     if value in sorted(differ_dict.values())[:11]:
-    #         key_list.append(key)
-
 
     differ_dict = {}
 
