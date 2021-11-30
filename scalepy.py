@@ -62,7 +62,7 @@ def targetSpectrum(Ss, S1, soil):
     TB = SD1 / SDs
     TL = 6
     
-    x_spectra = pd.read_csv("spectral_x.csv")
+    x_spectra = pd.read_csv("data/spectral_x.csv")
     cols = x_spectra.columns.tolist()
     t = []
 
@@ -144,7 +144,7 @@ def recordSelection(magnitude_range: str = '4 9',
 
 
     # Read the Meta Data
-    eqe_df = pd.read_csv("meta_data-R1.csv")
+    eqe_df = pd.read_csv("data/meta_data-R1.csv")
 
     print( f"Total number of PEER EQE Record is = {len( eqe_df)}")
 
@@ -194,8 +194,8 @@ def recordSelection(magnitude_range: str = '4 9',
     print( f"Total number of appropriate PEER EQE Record (1st selection) is = {len( eqe_s)}")
 
     # Read the spectral values
-    x_spectra = pd.read_csv("spectral_x.csv")
-    y_spectra = pd.read_csv("spectral_y.csv")
+    x_spectra = pd.read_csv("data/spectral_x.csv")
+    y_spectra = pd.read_csv("data/spectral_y.csv")
     
     # Create list of periods
     period_array = [ float( item ) for item in x_spectra.columns[2:] ]
@@ -258,10 +258,10 @@ def recordSelection(magnitude_range: str = '4 9',
 #---------------------------------------------------------------------------------------------------
 def amplitudeScaling(key_list, target , period = 1 ):
 
-    eqe_df = pd.read_csv("meta_data.csv")
+    eqe_df = pd.read_csv("data/meta_data.csv")
 
-    spectral_data_x = pd.read_csv("spectral_x.csv")
-    spectral_data_y = pd.read_csv("spectral_y.csv")
+    spectral_data_x = pd.read_csv("data/spectral_x.csv")
+    spectral_data_y = pd.read_csv("data/spectral_y.csv")
 
     #key_int = []
     #for i in key_list:
