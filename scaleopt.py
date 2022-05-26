@@ -6,6 +6,12 @@ from pandas.core.frame import DataFrame
 from scipy.interpolate import interp1d
 
 def targetSpectrum(Ss, S1, soil):
+    """
+    Args:
+       Ss: Spectral Acceleration Parameter at Short Periods
+       S1: Spectral Acceleration Parameter at 1-sec
+       soil: Soil Type
+    """
     
     Ss_range = [0.25 , 0.50 , 0.75, 1.00 , 1.25 , 1.50 ]
     FS_table = {"ZA": [0.8 , 0.8 , 0.8 , 0.8 , 0.8 , 0.8], 
