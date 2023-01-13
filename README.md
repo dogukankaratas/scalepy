@@ -1,7 +1,7 @@
 # Optimization Framework for Selection and Scaling of Earthquake Records
 
 ## Workflow
-![flowchart](https://user-images.githubusercontent.com/61163577/159950981-13642764-8c2b-4952-9168-aef0bc762b33.png)
+![image](https://user-images.githubusercontent.com/61163577/212420429-8876eeb2-5319-48f0-9d47-522cf824a0dc.png)
 
 ## Example
 ```  
