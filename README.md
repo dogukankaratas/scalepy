@@ -1,6 +1,6 @@
 # Framework for Selection and Scaling of Earthquake Records
 
-Select and scale ground motions in ScalePy's [Web Application](https://dogukankaratas-scalepy-scalepygui-r6tkg7.streamlit.app/)
+Select and scale ground motions in ScalePy's [Web Application](https://scalepy.streamlit.app/)
 
 ## Workflow
 ![image](https://user-images.githubusercontent.com/61163577/212420429-8876eeb2-5319-48f0-9d47-522cf824a0dc.png)
