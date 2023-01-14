@@ -1,4 +1,4 @@
-# Optimization Framework for Selection and Scaling of Earthquake Records
+# Framework for Selection and Scaling of Earthquake Records
 
 Select and scale ground motions in ScalePy's [Web Application](https://dogukankaratas-scalepy-guiscalepygui-5jmoeu.streamlit.app/)
 
