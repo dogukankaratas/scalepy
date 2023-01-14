@@ -65,7 +65,7 @@ with st.sidebar:
             periodRange = st.slider("Period Range of Interest Coefficients", 0.1, 3.0, (0.2, 1.5), 0.1)
             scaleButton = st.form_submit_button("Perform Amplitude Scaling")
 
-st.markdown("#### ScalePy Deneme")
+st.markdown("#### ScalePy")
 
 if responseButton:
     defaultTarget = scalepyBack.targetSpectrum(Ss, S1, soil)
@@ -354,7 +354,6 @@ if scaleButton:
 
         defaultFig.update_layout(showlegend=True, width=1000,height=600, title="Scaled Ground Motions", legend=dict(
                 yanchor="top",
-                width=[3,6],
                 x = 1,
                 xanchor="right"))
 
