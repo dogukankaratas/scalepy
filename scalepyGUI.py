@@ -27,6 +27,16 @@ defaultFig.update_layout(showlegend=False, width=1000,height=600, title="No Data
 
 st.set_page_config(page_title="Scalepy GUI",layout='wide')
 
+st.markdown("""
+    <style>
+      section[data-testid="stSidebar"][aria-expanded="true"]{
+        width: 60% !important;
+      }
+      section[data-testid="stSidebar"][aria-expanded="false"]{
+        width: 60% !important;
+      }
+    </style>""", unsafe_allow_html=True)
+
 with st.sidebar:
     st.markdown("## ScalePy - Ground Motion Selection and Scaling Framework")
     responseTab, selectionTab, scalingTab = st.tabs(["Define Response Spectrum", "Filter Ground Motions", "Scale Ground Motions"])
