@@ -1,8 +1,10 @@
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from pandas.core.frame import DataFrame
 from scipy.interpolate import interp1d
 import similaritymeasures
+from statistics import median
 
 # Ignores performance warnings
 from warnings import simplefilter
@@ -16,10 +18,6 @@ def targetSpectrum(Ss, S1, soil):
        S1: Spectral Acceleration Parameter at 1-sec
        soil: Soil Type
     """
-
-    Ss = float(Ss)
-    S1 = float(S1)
-    soil = str(soil)
     
     Ss_range = [0.25 , 0.50 , 0.75, 1.00 , 1.25 , 1.50 ]
     FS_table = {"ZA": [0.8 , 0.8 , 0.8 , 0.8 , 0.8 , 0.8], 
@@ -113,7 +111,7 @@ def recordSelection(magnitude_range: str = '4 9',
                    target_spectrum: DataFrame = pd.DataFrame() , 
                    pulse_type : str = "Any",
                    period: float = 1,
-                   recordNumber: int = 11):
+                   numberRecords: int = 11):
     """
     Args:
         magnitude_range (str): Magnitude Range
@@ -131,7 +129,6 @@ def recordSelection(magnitude_range: str = '4 9',
         target_spectra (dataframe): Target Spectra Dataframe
         pulse (int): Pulse [Pulse‐like (1)] or Non-pulse [non‐pulse‐like (0)] or Any[any (2)] indicator
     """
-
     # Read the Meta Data
     eqe_df = pd.read_csv("data/meta_data-R1.csv")
 
@@ -260,13 +257,13 @@ def recordSelection(magnitude_range: str = '4 9',
 
     # get most similiar 11 records
     similarities_df = similarities_df.sort_values(by='Mean')
-    selected_keys = similarities_df.head(recordNumber)['RSN'].to_list()
+    selected_keys = similarities_df.head(numberRecords)['RSN'].to_list()
 
     return selected_keys, eqe_selected_x, eqe_selected_y, rsn_selected, t, eqe_s_filtered
 
     ## Function for Amplitude Scaling ##
 
-def amplitudeScaling(key_list, target , period, spectra_increament_factor, period_range_low, period_range_high, components = 'srss'):
+def amplitudeScaling(key_list, target , period, targetShift, period_range_min, period_range_max, components = 'srss'):
 
     eqe_df = pd.read_csv("data/meta_data-R1.csv")
 
@@ -290,7 +287,7 @@ def amplitudeScaling(key_list, target , period, spectra_increament_factor, perio
 
     for i in rsn_selected:
         eqe_selected_x[ i ] = selected_x.loc[selected_x['RSN'] == i].iloc[0].tolist()[2:]
-        eqe_selected_y[ i ] = selected_y.loc[selected_y['RSN'] == i].iloc[0].tolist()[2:]
+        eqe_selected_y[ i ] = selected_y.loc[selected_y['RSN'] == i].iloc[0].tolist()[2:] 
 
     # Create Geometric Mean, SRSS Mean, RotD50 and RotD100 Functions
     def geomean_func(acc_1 , acc_2):
@@ -326,13 +323,12 @@ def amplitudeScaling(key_list, target , period, spectra_increament_factor, perio
     geo_mean_df.insert(0, 'T', t)
 
     for i in rsn_selected:
-        geo_mean_df[  i ] = geomean_func( eqe_selected_x[ i ].tolist() , eqe_selected_y[ i ].tolist() )
-           
+        geo_mean_df[  i ] = geomean_func( eqe_selected_x[ i ].tolist() , eqe_selected_y[ i ].tolist() )    
     
     # Slice the period range from target and geomean spectra
-    filtered_target = target[(target["T"] >= period_range_low*float(period)) & (target["T"] <= period_range_high*float(period))]
+    filtered_target = target[(target["T"] >= period_range_min*float(period)) & (target["T"] <= period_range_max*float(period))]
 
-    filtered_geo_mean = geo_mean_df[(geo_mean_df["T"] >= period_range_low*float(period)) & (geo_mean_df["T"] <= period_range_high*float(period))]
+    filtered_geo_mean = geo_mean_df[(geo_mean_df["T"] >= period_range_min*float(period)) & (geo_mean_df["T"] <= period_range_max*float(period))]
 
     # Find the differences in period range 
     geo_sf_dict = {}
@@ -356,7 +352,7 @@ def amplitudeScaling(key_list, target , period, spectra_increament_factor, perio
     geo_mean_1st_scaled_df["T"] = geo_mean_df["T"]
     for rsn in rsn_selected : 
         geo_mean_1st_scaled_df[ rsn ] = geo_sf_dict[ rsn] *  geo_mean_df[ rsn]
-    geo_mean_1st_scaled_df[ "Mean" ]  = geo_mean_1st_scaled_df[rsn_selected].mean( axis = 1 )
+    geo_mean_1st_scaled_df[ "Mean" ]  = geo_mean_1st_scaled_df[rsn_selected].mean( axis = 1 )  
 
     #################################### Use SRSS Function To Find Spectral Component Mean ####################################  
 
@@ -369,12 +365,12 @@ def amplitudeScaling(key_list, target , period, spectra_increament_factor, perio
         for i in rsn_selected:
             rsn_str.append( str(i))
                     
-        srss_mean_df['Mean'] = srss_mean_df[ key_list].mean(axis=1)
+        srss_mean_df['Mean'] = srss_mean_df[ key_list].mean(axis=1)   
         
-        filtered_srss = srss_mean_df[(srss_mean_df["T"] >= period_range_low*float(period)) & (srss_mean_df["T"] <= period_range_high*float(period))]
+        filtered_srss = srss_mean_df[(srss_mean_df["T"] >= period_range_min*float(period)) & (srss_mean_df["T"] <= period_range_max*float(period))]
         
         SF_ortalama , tol , counter  = 1 , 1 , 0
-        # spectra_increament_factor = 1.3
+        spectra_increament_factor = targetShift
         while tol > 0.01:
             
             ortalama_Scaled = filtered_srss["Mean"] * SF_ortalama 
@@ -408,7 +404,6 @@ def amplitudeScaling(key_list, target , period, spectra_increament_factor, perio
         for key , val in geo_sf_dict.items(): 
             sf_dict[ key ] = round( SF_ortalama * val * inc , 4 )
 
-        
         # Obtain the scaled spectral values
         eqe_selected_scaled_x , eqe_selected_scaled_y = pd.DataFrame() , pd.DataFrame()
         srss_mean_scaled_df = pd.DataFrame()
@@ -419,12 +414,12 @@ def amplitudeScaling(key_list, target , period, spectra_increament_factor, perio
             srss_mean_scaled_df[  rsn ] = srss_func( eqe_selected_scaled_x[ rsn ].tolist(), eqe_selected_scaled_y[ rsn ].tolist())
         
         srss_mean_scaled_df["Mean"] = srss_mean_scaled_df[ rsn_selected ].mean( axis = 1 )
-            
+        
         for rsn in rsn_selected : 
             temp_df = eqe_df[ eqe_df['RecordSequenceNumber'] == rsn]
 
-
         return sf_dict, multiplied_selected_x, multiplied_selected_y, geo_mean_1st_scaled_df, srss_mean_df, srss_mean_scaled_df
+
             #################################### Use RotD50 Function To Find Spectral Component Mean ####################################
 
     elif components == 'rotd50':    
@@ -436,12 +431,12 @@ def amplitudeScaling(key_list, target , period, spectra_increament_factor, perio
         for i in rsn_selected:
             rsn_str.append( str(i))
                     
-        rotd50_mean_df['Mean'] = rotd50_mean_df[ key_list].mean(axis=1)    
+        rotd50_mean_df['Mean'] = rotd50_mean_df[ key_list].mean(axis=1)  
         
-        filtered_rotd50 = rotd50_mean_df[(rotd50_mean_df["T"] >= period_range_low*float(period)) & (rotd50_mean_df["T"] <= period_range_high*float(period))]
+        filtered_rotd50 = rotd50_mean_df[(rotd50_mean_df["T"] >= period_range_min*float(period)) & (rotd50_mean_df["T"] <= period_range_max*float(period))]
         
         SF_ortalama , tol , counter  = 1 , 1 , 0
-        # spectra_increament_factor = 1.3
+        spectra_increament_factor = targetShift
         while tol > 0.01:
             
             ortalama_Scaled = filtered_rotd50["Mean"] * SF_ortalama 
@@ -485,10 +480,10 @@ def amplitudeScaling(key_list, target , period, spectra_increament_factor, perio
             rotd50_mean_scaled_df[  rsn ] = rotD50_func( eqe_selected_scaled_x[ rsn ].tolist(), eqe_selected_scaled_y[ rsn ].tolist())
         
         rotd50_mean_scaled_df["Mean"] = rotd50_mean_scaled_df[ rsn_selected ].mean( axis = 1 )
-            
+        
         for rsn in rsn_selected : 
             temp_df = eqe_df[ eqe_df['RecordSequenceNumber'] == rsn]
-         
+
         return sf_dict, multiplied_selected_x, multiplied_selected_y, geo_mean_1st_scaled_df, rotd50_mean_df, rotd50_mean_scaled_df
 
     #################################### Use RotD100 Function To Find Spectral Component Mean ####################################
@@ -502,12 +497,12 @@ def amplitudeScaling(key_list, target , period, spectra_increament_factor, perio
         for i in rsn_selected:
             rsn_str.append( str(i))
                     
-        rotd100_mean_df['Mean'] = rotd100_mean_df[ key_list].mean(axis=1)   
+        rotd100_mean_df['Mean'] = rotd100_mean_df[ key_list].mean(axis=1)    
         
-        filtered_rotd100 = rotd100_mean_df[(rotd100_mean_df["T"] >= period_range_low*float(period)) & (rotd100_mean_df["T"] <= period_range_high*float(period))]
+        filtered_rotd100 = rotd100_mean_df[(rotd100_mean_df["T"] >= period_range_min*float(period)) & (rotd100_mean_df["T"] <= period_range_max*float(period))]
         
         SF_ortalama , tol , counter  = 1 , 1 , 0
-        # spectra_increament_factor = 1.3
+        spectra_increament_factor = targetShift
         while tol > 0.01:
             
             ortalama_Scaled = filtered_rotd100["Mean"] * SF_ortalama 
@@ -551,8 +546,10 @@ def amplitudeScaling(key_list, target , period, spectra_increament_factor, perio
             rotd100_mean_scaled_df[  rsn ] = rotD100_func( eqe_selected_scaled_x[ rsn ].tolist(), eqe_selected_scaled_y[ rsn ].tolist())
         
         rotd100_mean_scaled_df["Mean"] = rotd100_mean_scaled_df[ rsn_selected ].mean( axis = 1 )
-            
+        
         for rsn in rsn_selected : 
             temp_df = eqe_df[ eqe_df['RecordSequenceNumber'] == rsn]
 
         return sf_dict, multiplied_selected_x, multiplied_selected_y, geo_mean_1st_scaled_df, rotd100_mean_df, rotd100_mean_scaled_df
+
+

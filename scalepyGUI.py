@@ -3,7 +3,6 @@ import scalepyBack
 import plotly.graph_objects as go
 import numpy as np
 import pandas as pd
-import base64
 
 # default empty figure
 defaultFig = go.Figure()
@@ -44,9 +43,9 @@ with st.sidebar:
         tbdyTab, asceTab, userDefinedTab = st.tabs(["acc. to TBDY-2018", "acc. to ASCE7-22", "User Defined"])
         with tbdyTab:
             with st.form("tbdyForm"):
-                Ss = st.number_input('Spectral Acceleration at Short Periods (Ss)', value=0.8)
-                S1 = st.number_input('Spectral Acceleration at 1 sec (S1)', value=0.4)
-                soil = st.selectbox('Soil Type', ('ZA', 'ZB', 'ZC', 'ZD', 'ZE'), 3)
+                Ss = st.number_input('Spectral Acceleration at Short Periods (Ss)', value=1.2)
+                S1 = st.number_input('Spectral Acceleration at 1 sec (S1)', value=0.25)
+                soil = st.selectbox('Soil Type', ('ZA', 'ZB', 'ZC', 'ZD', 'ZE'), 2)
                 responseButton = st.form_submit_button('Create Response Spectrum')
             st.markdown("#### Click [here](https://github.com/dogukankaratas/scalepy) for the source code :rocket:")
         with asceTab:
@@ -57,13 +56,13 @@ with st.sidebar:
     with selectionTab:
         with st.form("selectionForm"):
             period = st.number_input("Structure Period", 0.0, 10.0, 1.0, 0.1)
-            magnitudeRange = st.slider('Magnitude Range', 0.0, 12.0, (4.0, 9.0), step=0.2)
-            vs30Range = st.slider('Vs30 Range', 0, 1500, (180, 360), step=10)
-            rjbRange = st.slider('RJB Range', 0, 3000, (0, 500), step=10)
+            magnitudeRange = st.slider('Magnitude Range', 0.0, 12.0, (3.0, 10.0), step=0.2)
+            vs30Range = st.slider('Vs30 Range', 0, 1500, (360, 760), step=10)
+            rjbRange = st.slider('RJB Range', 0, 3000, (0, 3000), step=10)
             faultMechanism = st.selectbox('Fault Mechanism', ["Strike - Slip", "Normal", "Reverse", "Oblique", "Reverse - Oblique", "Normal - Oblique"])
-            duration575Range = st.slider('%5-%75 Duration Range', 0, 500, (0, 50), step=5)
-            duration595Range = st.slider('%5-%95 Duration Range', 0, 500, (0, 50), step=5)
-            ariasIntensity = st.slider('Arias Intensity Range', 0, 10, (0, 5), step=1)
+            duration575Range = st.slider('%5-%75 Duration Range', 0, 500, (0, 500), step=5)
+            duration595Range = st.slider('%5-%95 Duration Range', 0, 500, (0, 500), step=5)
+            ariasIntensity = st.slider('Arias Intensity Range', 0, 10, (0, 10), step=1)
             filterButton = st.form_submit_button("Filter Ground Motions")
             numberRecords = st.number_input("Number of Ground Motions to be Scaled", 1, value=11, step=1)
             selectButton = st.form_submit_button("Find Optimum Selected Ground Motions")
@@ -116,13 +115,14 @@ if filterButton:
                                                                                              tupleToStr(ariasIntensity), 
                                                                                              selectedTarget, 
                                                                                              "Any", 
-                                                                                             period)
+                                                                                             period,
+                                                                                             numberRecords)
     defaultFig = go.Figure()
     for name in rsn_selected:
         defaultFig.add_trace(go.Scatter(x = t,
                                     y=eqe_selected_x[name], line=dict(color='gray'), showlegend=False))
-    defaultFig.add_trace(go.Scatter(x = t,
-                                    y=eqe_selected_y[name], line=dict(color='gray'), showlegend=False))
+        defaultFig.add_trace(go.Scatter(x = t,
+                                        y=eqe_selected_y[name], line=dict(color='gray'), showlegend=False))
 
     defaultFig.add_trace(go.Scatter(x = selectedTarget['T'],
                                     y=selectedTarget['Sa'],
@@ -171,8 +171,8 @@ if selectButton:
     for name in selected_keys:
         defaultFig.add_trace(go.Scatter(x = t,
                                     y=eqe_selected_x[name], line=dict(color='gray'), showlegend=False))
-    defaultFig.add_trace(go.Scatter(x = t,
-                                    y=eqe_selected_y[name], line=dict(color='gray'), showlegend=False))
+        defaultFig.add_trace(go.Scatter(x = t,
+                                        y=eqe_selected_y[name], line=dict(color='gray'), showlegend=False))
 
     defaultFig.add_trace(go.Scatter(x = selectedTarget['T'],
                                     y=selectedTarget['Sa'],
