@@ -59,7 +59,7 @@ with st.sidebar:
             period = st.number_input("Structure Period", 0.0, 10.0, 1.0, 0.1)
             magnitudeRange = st.slider('Magnitude Range', 0.0, 12.0, (4.0, 9.0), step=0.2)
             vs30Range = st.slider('Vs30 Range', 0, 1500, (180, 360), step=10)
-            rjbRange = st.slider('RJB Range', 0, 500, (0, 100), step=10)
+            rjbRange = st.slider('RJB Range', 0, 3000, (0, 500), step=10)
             faultMechanism = st.selectbox('Fault Mechanism', ["Strike - Slip", "Normal", "Reverse", "Oblique", "Reverse - Oblique", "Normal - Oblique"])
             duration575Range = st.slider('%5-%75 Duration Range', 0, 100, (0, 50), step=5)
             duration595Range = st.slider('%5-%95 Duration Range', 0, 100, (0, 50), step=5)
