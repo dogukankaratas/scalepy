@@ -1,10 +1,8 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 from pandas.core.frame import DataFrame
 from scipy.interpolate import interp1d
 import similaritymeasures
-from statistics import median
 
 # Ignores performance warnings
 from warnings import simplefilter
