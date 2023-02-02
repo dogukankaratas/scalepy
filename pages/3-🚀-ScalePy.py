@@ -8,6 +8,7 @@ baseName = os.path.basename(__file__)
 dirName = os.path.dirname(__file__)
 sys.path.append(dirName + r'./')
 import scalepyBack
+import accesAsce
 
 # default empty figure
 defaultFig = go.Figure()
@@ -46,18 +47,32 @@ with inputCol:
     st.markdown("## ScalePy")
     responseTab, selectionTab, scalingTab = st.tabs(["Response Spectrum", "Record Filtering", "Scaling"])
     with responseTab:
-        tbdyTab, asceTab, userDefinedTab = st.tabs(["TBEC-2018", "ASCE7-22", "User Defined"])
-        with tbdyTab:
-            with st.form("tbdyForm"):
+        responseDefinitionType = st.selectbox("Spectrum Definition", ['TBEC-2018', 'ASCE7-22', 'User-Defined'])
+        if responseDefinitionType == 'TBEC-2018':
+            with st.form("tbecForm"):
                 Ss = st.number_input('Spectral Acceleration at Short Periods (Ss)', value=1.2)
                 S1 = st.number_input('Spectral Acceleration at 1 sec (S1)', value=0.25)
                 soil = st.selectbox('Soil Type', ('ZA', 'ZB', 'ZC', 'ZD', 'ZE'), 2)
                 responseButton = st.form_submit_button('Create Response Spectrum')
-        with asceTab:
-            st.markdown("##### Still under work. Maybe you can contribute this section?")
-        with userDefinedTab:
-            st.markdown("##### Still under work. Maybe you can contribute this section?")
-        
+        if responseDefinitionType == 'ASCE7-22':
+            with st.form("asceForm"):
+                responseType = st.selectbox("Spectrum Type", ('Multi Period Design Spectrum', 'Multi Period MCEr Design Spectrum', 'Two Period Design Spectrum', 'Two Period MCEr Design Spectrum'))
+                latitude = st.number_input('Latitude of Location', 26.0, 50.0, 32.0, 1.0)
+                longitude = st.number_input('Longitude of Location', -125.0, -65.0, -94.0, 1.0)
+                asceSoil = st.selectbox("Soil Type", ('A', 'B', 'C', 'D', 'E'), 2)
+                asceResponseButton = st.form_submit_button('Create Response Spectrum')
+        if responseDefinitionType == 'User-Defined':
+            st.info('Please consider the format in the example file.', icon="ℹ️")
+            targetDf = scalepyBack.targetSpectrum(0.8, 0.4, "ZC")
+            @st.cache
+            def convert_df(df):
+                return df.to_csv().encode('utf-8')
+            exampleCSV = convert_df(targetDf)
+            st.download_button("Example CSV file", data=exampleCSV, file_name='exampleSpectrum.csv', mime='text/csv')
+            with st.form("userDefinedForm"):
+                userDefinedSpectrum = st.file_uploader('Upload Response Spectrum Data', type='csv', accept_multiple_files=False)
+                userDefinedSpectrumButton = st.form_submit_button('Create Response Spectrum')
+
     with selectionTab:
         with st.form("selectionForm"):
             period = st.number_input("Structure Period", 0.0, 10.0, 1.0, 0.1)
@@ -79,44 +94,196 @@ with inputCol:
             periodRange = st.slider("Period Range of Interest Coefficients", 0.1, 3.0, (0.2, 1.5), 0.1)
             scaleButton = st.form_submit_button("Perform Amplitude Scaling")
 
-if responseButton:
-    defaultTarget = scalepyBack.targetSpectrum(Ss, S1, soil)
-    defaultTarget = defaultTarget.rename(columns={'T': 'Period (sec)', 'Sa': 'pSa (g)'})
-    defaultFig = go.Figure()
-    defaultFig.add_trace(go.Scatter(x = defaultTarget['Period (sec)'],
-                                    y=defaultTarget['pSa (g)'],
-                                    name='Response Spectrum', line=dict(color='red')))
+if responseDefinitionType == 'TBEC-2018':
+    if responseButton:
+        defaultTarget = scalepyBack.targetSpectrum(Ss, S1, soil)
+        defaultTarget = defaultTarget.rename(columns={'T': 'Period (sec)', 'Sa': 'pSa (g)'})
+        defaultFig = go.Figure()
+        defaultFig.add_trace(go.Scatter(x = defaultTarget['Period (sec)'],
+                                        y=defaultTarget['pSa (g)'],
+                                        name='Response Spectrum', line=dict(color='red')))
 
-    defaultFig.update_xaxes(
-        title_text = 'Period (sec)',
-        range=[0,4],
-        tickvals=np.arange(0,4.5,0.5),
-        dtick = 1,
-        showgrid = True,
-        zeroline=True,
-        zerolinewidth=1
-    )
+        defaultFig.update_xaxes(
+            title_text = 'Period (sec)',
+            range=[0,4],
+            tickvals=np.arange(0,4.5,0.5),
+            dtick = 1,
+            showgrid = True,
+            zeroline=True,
+            zerolinewidth=1
+        )
 
-    defaultFig.update_yaxes(
-        title_text = 'pSa (g)',
-        range=[0,3],
-        showgrid = True,
-        zeroline=True,
-        zerolinewidth=1
-    )
+        defaultFig.update_yaxes(
+            title_text = 'pSa (g)',
+            range=[0,3],
+            showgrid = True,
+            zeroline=True,
+            zerolinewidth=1
+        )
 
-    defaultFig.update_layout(showlegend=True, template=None, plot_bgcolor = "#F0F2F6", width=1100,height=600, 
-                             title_text='Response Spectrum', title_x=0.5, legend=dict(
-                                                            yanchor="top",
-                                                            x = 1,
-                                                            xanchor="right")
-                            )
+        defaultFig.update_layout(showlegend=True, template=None, plot_bgcolor = "#F0F2F6", width=1100,height=600, 
+                                title_text='Response Spectrum', title_x=0.5, legend=dict(
+                                                                yanchor="top",
+                                                                x = 1,
+                                                                xanchor="right")
+                                )
+
+if responseDefinitionType == 'ASCE7-22':
+    if asceResponseButton:
+        initialResponse = scalepyBack.targetSpectrum(0.8, 0.4, "ZC")
+        t = initialResponse['T']
+
+        if responseType == 'Multi Period Design Spectrum':
+            asceInit = accesAsce.getAsceDataMulti(latitude, longitude, 'III', asceSoil, 'Call')
+            targetAsce = pd.DataFrame()
+            targetAsce['multiPeriodDesignSpectrumPeriods'] = t
+            targetAsce['multiPeriodDesignSpectrumOrdinates'] = [x*9.81 for x in np.interp(t, asceInit['multiPeriodDesignSpectrumPeriods'], asceInit['multiPeriodDesignSpectrumOrdinates'])]
+            targetAsce = targetAsce.rename(columns={'multiPeriodDesignSpectrumPeriods': 'T', 'multiPeriodDesignSpectrumOrdinates': 'Sa'})
+
+        elif responseType == 'Multi Period MCEr Design Spectrum':
+            asceInit = accesAsce.getAsceDataMultiMCEr(latitude, longitude, 'III', asceSoil, 'Call')
+            targetAsce = pd.DataFrame()
+            targetAsce['multiPeriodMCErSpectrumPeriods'] = t
+            targetAsce['multiPeriodMCErSpectrumOrdinates'] = [x*9.81 for x in np.interp(t, asceInit['multiPeriodMCErSpectrumPeriods'], asceInit['multiPeriodMCErSpectrumOrdinates'])]
+            targetAsce = targetAsce.rename(columns={'multiPeriodMCErSpectrumPeriods': 'T', 'multiPeriodMCErSpectrumOrdinates': 'Sa'})
+
+        elif responseType == 'Two Period Design Spectrum':
+            asceInit = accesAsce.getAsceDataTwo(latitude, longitude, 'III', asceSoil, 'Call')
+            targetAsce = pd.DataFrame()
+            targetAsce['twoPeriodDesignSpectrumPeriods'] = t
+            targetAsce['twoPeriodDesignSpectrumOrdinates'] = [x*9.81 for x in np.interp(t, asceInit['twoPeriodDesignSpectrumPeriods'], asceInit['twoPeriodDesignSpectrumOrdinates'])]
+            targetAsce = targetAsce.rename(columns={'twoPeriodDesignSpectrumPeriods': 'T', 'twoPeriodDesignSpectrumOrdinates': 'Sa'})
+
+        elif responseType == 'Two Period MCEr Design Spectrum':
+            asceInit = accesAsce.getAsceDataTwoMCEr(latitude, longitude, 'III', asceSoil, 'Call')
+            targetAsce = pd.DataFrame()
+            targetAsce['twoPeriodMCErSpectrumPeriods'] = t
+            targetAsce['twoPeriodMCErSpectrumOrdinates'] = [x*9.81 for x in np.interp(t, asceInit['twoPeriodMCErSpectrumPeriods'], asceInit['twoPeriodMCErSpectrumOrdinates'])]
+            targetAsce = targetAsce.rename(columns={'twoPeriodMCErSpectrumPeriods': 'T', 'twoPeriodMCErSpectrumOrdinates': 'Sa'})
+
+        defaultTarget = targetAsce
+
+        defaultTarget = defaultTarget.rename(columns={'T': 'Period (sec)', 'Sa': 'pSa (g)'})
+        defaultFig = go.Figure()
+        defaultFig.add_trace(go.Scatter(x = defaultTarget['Period (sec)'],
+                                        y=defaultTarget['pSa (g)'],
+                                        name='Response Spectrum', line=dict(color='red')))
+
+        defaultFig.update_xaxes(
+            title_text = 'Period (sec)',
+            range=[0,4],
+            tickvals=np.arange(0,4.5,0.5),
+            dtick = 1,
+            showgrid = True,
+            zeroline=True,
+            zerolinewidth=1
+        )
+
+        defaultFig.update_yaxes(
+            title_text = 'pSa (g)',
+            range=[0,3],
+            showgrid = True,
+            zeroline=True,
+            zerolinewidth=1
+        )
+
+        defaultFig.update_layout(showlegend=True, template=None, plot_bgcolor = "#F0F2F6", width=1100,height=600, 
+                                title_text='Response Spectrum', title_x=0.5, legend=dict(
+                                                                yanchor="top",
+                                                                x = 1,
+                                                                xanchor="right")
+                                )
+if responseDefinitionType == 'User-Defined':
+    if userDefinedSpectrumButton:
+        if userDefinedSpectrum is None:
+            st.error('No file has uploaded.', icon="🚨")
+        else:
+            spectrumData = pd.read_csv(userDefinedSpectrum)
+            spectrumData = spectrumData.loc[:, ~spectrumData.columns.str.contains('^Unnamed')]
+            defaultTarget = spectrumData
+            defaultTarget = defaultTarget.rename(columns={'T': 'Period (sec)', 'Sa': 'pSa (g)'})
+            defaultFig = go.Figure()
+            defaultFig.add_trace(go.Scatter(x = defaultTarget['Period (sec)'],
+                                            y=defaultTarget['pSa (g)'],
+                                            name='Response Spectrum', line=dict(color='red')))
+
+            defaultFig.update_xaxes(
+                title_text = 'Period (sec)',
+                range=[0,4],
+                tickvals=np.arange(0,4.5,0.5),
+                dtick = 1,
+                showgrid = True,
+                zeroline=True,
+                zerolinewidth=1
+            )
+
+            defaultFig.update_yaxes(
+                title_text = 'pSa (g)',
+                range=[0,3],
+                showgrid = True,
+                zeroline=True,
+                zerolinewidth=1
+            )
+
+            defaultFig.update_layout(showlegend=True, template=None, plot_bgcolor = "#F0F2F6", width=1100,height=600, 
+                                    title_text='Response Spectrum', title_x=0.5, legend=dict(
+                                                                    yanchor="top",
+                                                                    x = 1,
+                                                                    xanchor="right")
+                                    )
 
 if filterButton:
 
     def tupleToStr(tup):
         return'{value1} {value2}'.format(value1= tup[0], value2 = tup[1])
-    selectedTarget = scalepyBack.targetSpectrum(Ss, S1, soil)
+
+    if responseDefinitionType == 'TBEC-2018':
+        selectedTarget = scalepyBack.targetSpectrum(Ss, S1, soil)
+
+    elif responseDefinitionType == 'ASCE7-22':
+
+        initialResponse = scalepyBack.targetSpectrum(0.8, 0.4, "ZC")
+        t = initialResponse['T']
+
+        if responseType == 'Multi Period Design Spectrum':
+            asceInit = accesAsce.getAsceDataMulti(latitude, longitude, 'III', asceSoil, 'Call')
+            targetAsce = pd.DataFrame()
+            targetAsce['multiPeriodDesignSpectrumPeriods'] = t
+            targetAsce['multiPeriodDesignSpectrumOrdinates'] = [x*9.81 for x in np.interp(t, asceInit['multiPeriodDesignSpectrumPeriods'], asceInit['multiPeriodDesignSpectrumOrdinates'])]
+            targetAsce = targetAsce.rename(columns={'multiPeriodDesignSpectrumPeriods': 'T', 'multiPeriodDesignSpectrumOrdinates': 'Sa'})
+
+        elif responseType == 'Multi Period MCEr Design Spectrum':
+            asceInit = accesAsce.getAsceDataMultiMCEr(latitude, longitude, 'III', asceSoil, 'Call')
+            targetAsce = pd.DataFrame()
+            targetAsce['multiPeriodMCErSpectrumPeriods'] = t
+            targetAsce['multiPeriodMCErSpectrumOrdinates'] = [x*9.81 for x in np.interp(t, asceInit['multiPeriodMCErSpectrumPeriods'], asceInit['multiPeriodMCErSpectrumOrdinates'])]
+            targetAsce = targetAsce.rename(columns={'multiPeriodMCErSpectrumPeriods': 'T', 'multiPeriodMCErSpectrumOrdinates': 'Sa'})
+
+        elif responseType == 'Two Period Design Spectrum':
+            asceInit = accesAsce.getAsceDataTwo(latitude, longitude, 'III', asceSoil, 'Call')
+            targetAsce = pd.DataFrame()
+            targetAsce['twoPeriodDesignSpectrumPeriods'] = t
+            targetAsce['twoPeriodDesignSpectrumOrdinates'] = [x*9.81 for x in np.interp(t, asceInit['twoPeriodDesignSpectrumPeriods'], asceInit['twoPeriodDesignSpectrumOrdinates'])]
+            targetAsce = targetAsce.rename(columns={'twoPeriodDesignSpectrumPeriods': 'T', 'twoPeriodDesignSpectrumOrdinates': 'Sa'})
+
+        elif responseType == 'Two Period MCEr Design Spectrum':
+            asceInit = accesAsce.getAsceDataTwoMCEr(latitude, longitude, 'III', asceSoil, 'Call')
+            targetAsce = pd.DataFrame()
+            targetAsce['twoPeriodMCErSpectrumPeriods'] = t
+            targetAsce['twoPeriodMCErSpectrumOrdinates'] = [x*9.81 for x in np.interp(t, asceInit['twoPeriodMCErSpectrumPeriods'], asceInit['twoPeriodMCErSpectrumOrdinates'])]
+            targetAsce = targetAsce.rename(columns={'twoPeriodMCErSpectrumPeriods': 'T', 'twoPeriodMCErSpectrumOrdinates': 'Sa'})
+
+        selectedTarget = targetAsce
+    
+    elif responseDefinitionType == 'User-Defined':
+        if userDefinedSpectrum is None:
+            st.error('No file has uploaded.', icon="🚨")
+        else:
+            spectrumData = pd.read_csv(userDefinedSpectrum)
+            spectrumData = spectrumData.loc[:, ~spectrumData.columns.str.contains('^Unnamed')]
+        selectedTarget = spectrumData
+
+
     selected_keys, eqe_selected_x, eqe_selected_y, rsn_selected, t, eqe_s = scalepyBack.recordSelection(tupleToStr(magnitudeRange), 
                                                                                              tupleToStr(vs30Range), 
                                                                                              tupleToStr(rjbRange), 
@@ -176,7 +343,53 @@ if selectButton:
 
     def tupleToStr(tup):
         return'{value1} {value2}'.format(value1= tup[0], value2 = tup[1])
-    selectedTarget = scalepyBack.targetSpectrum(Ss, S1, soil)
+
+    if responseDefinitionType == 'TBEC-2018':
+        selectedTarget = scalepyBack.targetSpectrum(Ss, S1, soil)
+
+    if responseDefinitionType == 'ASCE7-22':
+
+        initialResponse = scalepyBack.targetSpectrum(0.8, 0.4, "ZC")
+        t = initialResponse['T']
+
+        if responseType == 'Multi Period Design Spectrum':
+            asceInit = accesAsce.getAsceDataMulti(latitude, longitude, 'III', asceSoil, 'Call')
+            targetAsce = pd.DataFrame()
+            targetAsce['multiPeriodDesignSpectrumPeriods'] = t
+            targetAsce['multiPeriodDesignSpectrumOrdinates'] = [x*9.81 for x in np.interp(t, asceInit['multiPeriodDesignSpectrumPeriods'], asceInit['multiPeriodDesignSpectrumOrdinates'])]
+            targetAsce = targetAsce.rename(columns={'multiPeriodDesignSpectrumPeriods': 'T', 'multiPeriodDesignSpectrumOrdinates': 'Sa'})
+
+        elif responseType == 'Multi Period MCEr Design Spectrum':
+            asceInit = accesAsce.getAsceDataMultiMCEr(latitude, longitude, 'III', asceSoil, 'Call')
+            targetAsce = pd.DataFrame()
+            targetAsce['multiPeriodMCErSpectrumPeriods'] = t
+            targetAsce['multiPeriodMCErSpectrumOrdinates'] = [x*9.81 for x in np.interp(t, asceInit['multiPeriodMCErSpectrumPeriods'], asceInit['multiPeriodMCErSpectrumOrdinates'])]
+            targetAsce = targetAsce.rename(columns={'multiPeriodMCErSpectrumPeriods': 'T', 'multiPeriodMCErSpectrumOrdinates': 'Sa'})
+
+        elif responseType == 'Two Period Design Spectrum':
+            asceInit = accesAsce.getAsceDataTwo(latitude, longitude, 'III', asceSoil, 'Call')
+            targetAsce = pd.DataFrame()
+            targetAsce['twoPeriodDesignSpectrumPeriods'] = t
+            targetAsce['twoPeriodDesignSpectrumOrdinates'] = [x*9.81 for x in np.interp(t, asceInit['twoPeriodDesignSpectrumPeriods'], asceInit['twoPeriodDesignSpectrumOrdinates'])]
+            targetAsce = targetAsce.rename(columns={'twoPeriodDesignSpectrumPeriods': 'T', 'twoPeriodDesignSpectrumOrdinates': 'Sa'})
+
+        elif responseType == 'Two Period MCEr Design Spectrum':
+            asceInit = accesAsce.getAsceDataTwoMCEr(latitude, longitude, 'III', asceSoil, 'Call')
+            targetAsce = pd.DataFrame()
+            targetAsce['twoPeriodMCErSpectrumPeriods'] = t
+            targetAsce['twoPeriodMCErSpectrumOrdinates'] = [x*9.81 for x in np.interp(t, asceInit['twoPeriodMCErSpectrumPeriods'], asceInit['twoPeriodMCErSpectrumOrdinates'])]
+            targetAsce = targetAsce.rename(columns={'twoPeriodMCErSpectrumPeriods': 'T', 'twoPeriodMCErSpectrumOrdinates': 'Sa'})
+
+        selectedTarget = targetAsce
+
+    elif responseDefinitionType == 'User-Defined':
+        if userDefinedSpectrum is None:
+            st.error('No file has uploaded.', icon="🚨")
+        else:
+            spectrumData = pd.read_csv(userDefinedSpectrum)
+            spectrumData = spectrumData.loc[:, ~spectrumData.columns.str.contains('^Unnamed')]
+        selectedTarget = spectrumData
+
     selected_keys, eqe_selected_x, eqe_selected_y, rsn_selected, t, eqe_s = scalepyBack.recordSelection(tupleToStr(magnitudeRange), 
                                                                                              tupleToStr(vs30Range), 
                                                                                              tupleToStr(rjbRange), 
@@ -236,7 +449,53 @@ if scaleButton:
 
     def tupleToStr(tup):
         return'{value1} {value2}'.format(value1= tup[0], value2 = tup[1])
-    selectedTarget = scalepyBack.targetSpectrum(Ss, S1, soil)
+
+    if responseDefinitionType == 'TBEC-2018':
+        selectedTarget = scalepyBack.targetSpectrum(Ss, S1, soil)
+
+    if responseDefinitionType == 'ASCE7-22':
+
+        initialResponse = scalepyBack.targetSpectrum(0.8, 0.4, "ZC")
+        t = initialResponse['T']
+
+        if responseType == 'Multi Period Design Spectrum':
+            asceInit = accesAsce.getAsceDataMulti(latitude, longitude, 'III', asceSoil, 'Call')
+            targetAsce = pd.DataFrame()
+            targetAsce['multiPeriodDesignSpectrumPeriods'] = t
+            targetAsce['multiPeriodDesignSpectrumOrdinates'] = [x*9.81 for x in np.interp(t, asceInit['multiPeriodDesignSpectrumPeriods'], asceInit['multiPeriodDesignSpectrumOrdinates'])]
+            targetAsce = targetAsce.rename(columns={'multiPeriodDesignSpectrumPeriods': 'T', 'multiPeriodDesignSpectrumOrdinates': 'Sa'})
+
+        elif responseType == 'Multi Period MCEr Design Spectrum':
+            asceInit = accesAsce.getAsceDataMultiMCEr(latitude, longitude, 'III', asceSoil, 'Call')
+            targetAsce = pd.DataFrame()
+            targetAsce['multiPeriodMCErSpectrumPeriods'] = t
+            targetAsce['multiPeriodMCErSpectrumOrdinates'] = [x*9.81 for x in np.interp(t, asceInit['multiPeriodMCErSpectrumPeriods'], asceInit['multiPeriodMCErSpectrumOrdinates'])]
+            targetAsce = targetAsce.rename(columns={'multiPeriodMCErSpectrumPeriods': 'T', 'multiPeriodMCErSpectrumOrdinates': 'Sa'})
+
+        elif responseType == 'Two Period Design Spectrum':
+            asceInit = accesAsce.getAsceDataTwo(latitude, longitude, 'III', asceSoil, 'Call')
+            targetAsce = pd.DataFrame()
+            targetAsce['twoPeriodDesignSpectrumPeriods'] = t
+            targetAsce['twoPeriodDesignSpectrumOrdinates'] = [x*9.81 for x in np.interp(t, asceInit['twoPeriodDesignSpectrumPeriods'], asceInit['twoPeriodDesignSpectrumOrdinates'])]
+            targetAsce = targetAsce.rename(columns={'twoPeriodDesignSpectrumPeriods': 'T', 'twoPeriodDesignSpectrumOrdinates': 'Sa'})
+
+        elif responseType == 'Two Period MCEr Design Spectrum':
+            asceInit = accesAsce.getAsceDataTwoMCEr(latitude, longitude, 'III', asceSoil, 'Call')
+            targetAsce = pd.DataFrame()
+            targetAsce['twoPeriodMCErSpectrumPeriods'] = t
+            targetAsce['twoPeriodMCErSpectrumOrdinates'] = [x*9.81 for x in np.interp(t, asceInit['twoPeriodMCErSpectrumPeriods'], asceInit['twoPeriodMCErSpectrumOrdinates'])]
+            targetAsce = targetAsce.rename(columns={'twoPeriodMCErSpectrumPeriods': 'T', 'twoPeriodMCErSpectrumOrdinates': 'Sa'})
+
+        selectedTarget = targetAsce
+
+    elif responseDefinitionType == 'User-Defined':
+        if userDefinedSpectrum is None:
+            st.error('No file has uploaded.', icon="🚨")
+        else:
+            spectrumData = pd.read_csv(userDefinedSpectrum)
+            spectrumData = spectrumData.loc[:, ~spectrumData.columns.str.contains('^Unnamed')]
+        selectedTarget = spectrumData
+    
     selected_keys, eqe_selected_x, eqe_selected_y, rsn_selected, t, eqe_s = scalepyBack.recordSelection(tupleToStr(magnitudeRange), 
                                                                                              tupleToStr(vs30Range), 
                                                                                              tupleToStr(rjbRange), 
@@ -299,7 +558,7 @@ if scaleButton:
 
         defaultFig.update_yaxes(
             title_text = 'pSa (g)',
-            range=[0,3],
+            range=[0,max(srss_mean_scaled_df[ "Mean"]) + 1],
             showgrid = True,
             zeroline=True,
             zerolinewidth=1
@@ -365,7 +624,7 @@ if scaleButton:
 
         defaultFig.update_yaxes(
             title_text = 'pSa (g)',
-            range=[0,3],
+            range=[0,max(rotd50_mean_scaled_df[ "Mean"]) + 1],
             showgrid = True,
             zeroline=True,
             zerolinewidth=1
@@ -431,7 +690,7 @@ if scaleButton:
 
         defaultFig.update_yaxes(
             title_text = 'pSa (g)',
-            range=[0,3],
+            range=[0,max(rotd100_mean_scaled_df[ "Mean"]) +1],
             showgrid = True,
             zeroline=True,
             zerolinewidth=1
