@@ -3,11 +3,34 @@ import numpy as np
 from pandas.core.frame import DataFrame
 from scipy.interpolate import interp1d
 import similaritymeasures
+import scipy as sp
 
 # Ignores performance warnings
 from warnings import simplefilter
 simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
 simplefilter(action="ignore", category=FutureWarning)
+
+def parameterCreator(lat, lon, intensity):
+    spectral_value_dict = {}
+
+    afad_spectra_params_df = pd.read_csv("data/afadParameters.csv")
+    
+    # Grid locattions
+    x = afad_spectra_params_df["LAT"].to_list()
+    y = afad_spectra_params_df["LON"].to_list()
+
+    # Spectral values dictionary
+    for column_name in ["Ss","S1","PGA","PGV"]:
+
+        z = afad_spectra_params_df[ f"{column_name}-{intensity}"].to_list()
+
+        interpolator = sp.interpolate.CloughTocher2DInterpolator( np.array([x,y]).T , z)
+
+        spectral_value = np.round( interpolator( lat,lon)  , 3 )
+            
+        spectral_value_dict[ column_name ] = spectral_value
+
+    return spectral_value_dict
 
 def targetSpectrum(Ss, S1, soil):
     """
